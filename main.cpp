@@ -16,7 +16,8 @@ int main(){
     serial.open(PORT);
     }
     serial.write("255");
-    serial.close();
+    serial.async_read();
     io.run();
+    //serial.close();
     return 0;
 }

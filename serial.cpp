@@ -282,13 +282,16 @@ void Serial::openAndWaitOnPort(std::string port_name){
 
 void Serial::async_read(){
   boost::system::error_code e;
-  boost::asio::async_read(port_, readBuf_, boost::bind(&Serial::async_read_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+  boost::asio::async_read(*port_, *readBuf_, boost::bind(&Serial::async_read_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
-void Serial::async_read_handler(boost::system::error_code &e, std::size_t bytes_read){
+void Serial::async_read_handler(const boost::system::error_code &e, std::size_t bytes_read){
   if(!e){
     if(bytes_read <= 0){
       std::cout << "Serial Port with ID: " << port_name_ << " did not read any bytes from the stream." << std::endl;
+    }
+    else{
+      std::cout << "Bytes read: " << bytes_read << std::endl;
     }
   }
   else{

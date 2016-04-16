@@ -17,7 +17,7 @@ public:
   void wait(int time);
   bool is_open();
   void async_read();
-  void async_read_handler(boost::system::error_code &e, std::size_t bytes_read);
+  void async_read_handler(const boost::system::error_code &e, std::size_t bytes_read);
 //boost::asio::serial_port &port, boost::asio::mutable_buffer &readBuffer, bool (Serial::*)(boost::system::error_code &e, std::size_t bytes_read)
 private:
   std::string port_name_;
