@@ -10,13 +10,13 @@
 
 /****************** User Config ***************************/
 /***      Set this radio as radio number 0 or 1         ***/
-bool radioNumber = 0;
+bool radioNumber = 1;
 
 /* Hardware configuration: Set up nRF24L01 radio on SPI bus plus pins 7 & 8 */
 RF24 radio(7,8);
 /**********************************************************/
 
-byte addresses[][6] = {"1Node","2Node"};
+byte addresses[][6] = {"Node1","Node2"};
 
 // Used to control whether this node is sending or receiving
 bool role = 1;
@@ -80,7 +80,7 @@ if (role == 1)  {
     boolean timeout = false;                                   // Set up a variable to indicate if a response was received or not
     
     while ( ! radio.available() ){                             // While nothing is received
-      if (micros() - started_waiting_at > 2000 ){            // If waited longer than 200ms, indicate timeout and exit while loop
+      if (micros() - started_waiting_at > 2000 ){            // If waited longer than 2ms, indicate timeout and exit while loop
           timeout = true;
           break;
       }      
@@ -142,16 +142,5 @@ if (role == 1)  {
   Serial.println();
   over = true;
   }
-/****************** Pong Back Role ****
- }
-
-
-
-
-/****************** Change Roles via Serial Commands ***************************/
-
-
-
-
 } // Loop
 

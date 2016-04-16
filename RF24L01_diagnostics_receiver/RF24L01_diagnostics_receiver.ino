@@ -19,7 +19,7 @@ RF24 radio(7,8);
 byte addresses[][6] = {"1Node","2Node"};
 
 // Used to control whether this node is sending or receiving
-bool role = 1;
+bool role = 0;
 
 void setup() {
   Serial.begin(115200);
