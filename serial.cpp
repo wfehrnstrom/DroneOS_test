@@ -287,6 +287,8 @@ void Serial::async_read(){
 
 void Serial::async_read_handler(const boost::system::error_code &e, std::size_t bytes_read){
   if(!e){
+    std::cout << e.message() << std::endl;
+    std::cout << bytes_read << std::endl;
     if(bytes_read <= 0){
       std::cout << "Serial Port with ID: " << port_name_ << " did not read any bytes from the stream." << std::endl;
     }
