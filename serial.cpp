@@ -154,8 +154,9 @@
 Serial::Serial(std::string port_name, boost::asio::io_service* io):port_name_(){
   //In default constructor, set baud rate to 9600
   port_ = new boost::asio::serial_port(*io, port_name);
-  const boost::asio::mutable_buffer* mutableReadBuf = new boost::asio::mutable_buffer();
-  const boost::asio::mutable_buffer* mutableWriteBuf = new boost::asio::mutable_buffer();
+  boost::asio::mutable_buffer* mutableReadBuf = new boost::asio::mutable_buffer();
+  boost::asio::mutable_buffer* mutableWriteBuf = new boost::asio::mutable_buffer();
+  //b_ = new boost::asio::streambuf(1024, alloc);
   readBuf_ = new boost::asio::mutable_buffers_1(*mutableReadBuf);
   writeBuf_ = new boost::asio::mutable_buffers_1(*mutableWriteBuf);
   port_->set_option(boost::asio::serial_port::baud_rate(9600));
@@ -173,8 +174,8 @@ Serial::Serial(std::string port_name, boost::asio::io_service* io):port_name_(){
 
 Serial::Serial(std::string port_name, boost::asio::io_service* io, int baud_rate, std::string flow_control, std::string parity, float stop_bits):port_name_(){
   port_ = new boost::asio::serial_port(*io, port_name);
-  const boost::asio::mutable_buffer* mutableReadBuf = new boost::asio::mutable_buffer();
-  const boost::asio::mutable_buffer* mutableWriteBuf = new boost::asio::mutable_buffer();
+  boost::asio::mutable_buffer* mutableReadBuf = new boost::asio::mutable_buffer();
+  boost::asio::mutable_buffer* mutableWriteBuf = new boost::asio::mutable_buffer();
   readBuf_ = new boost::asio::mutable_buffers_1(*mutableReadBuf);
   writeBuf_ = new boost::asio::mutable_buffers_1(*mutableWriteBuf);
   port_->set_option(boost::asio::serial_port::baud_rate(baud_rate));
@@ -286,17 +287,22 @@ void Serial::async_read(){
 }
 
 void Serial::async_read_handler(const boost::system::error_code &e, std::size_t bytes_read){
-  if(!e){
-    std::cout << e.message() << std::endl;
+  std::cout << "Entered serial read handler" << std::endl;
+  if(!(*e)){
+    //std::cout << e.message() << std::endl;
     std::cout << bytes_read << std::endl;
-    if(bytes_read <= 0){
-      std::cout << "Serial Port with ID: " << port_name_ << " did not read any bytes from the stream." << std::endl;
+    if(bytes_read > 0){
+      std::string read = *boost::asio::buffer_cast<std::string*>(*readBuf_);
+      std::cout << "Read: " <<std::endl;
+      std::cout << read <<std::endl;
+      //boost::asio::async_read(*port_, *readBuf_, boost::bind(&Serial::async_read_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
     }
     else{
-      std::cout << "Bytes read: " << bytes_read << std::endl;
+      std::cout << readBuf_ <<std::endl;
     }
   }
   else{
+    std::cout << "Error occurred!" << std::endl;
     std::cerr << e.message() << std::endl;
   }
 }

@@ -25,5 +25,6 @@ private:
   //boost::asio::mutable_buffers_1 readBuf_(const boost::asio::mutable_buffer buf());
   boost::asio::mutable_buffers_1* readBuf_;
   boost::asio::mutable_buffers_1* writeBuf_;
+  boost::asio::streambuf b_;
 };
 #endif

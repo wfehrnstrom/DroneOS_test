@@ -1,13 +1,26 @@
 #ifndef IOSTREAM_H
 #include <iostream>
 #endif
-//HI GIT
 #ifndef SERIAL_H
 #include "serial.h"
 #endif
-
-//#include <boost/asio.hpp>
 #define PORT "/dev/tty.usbmodem1411"
+
+// void async_read_handler(const boost::system::error_code &e, std::size_t bytes_read){
+//   if(!e){
+//     std::cout << e.message() << std::endl;
+//     std::cout << bytes_read << std::endl;
+//     if(bytes_read <= 0){
+//       boost::asio::async_read(*port, boost::asio::buffer(*buf), boost::bind(async_read_handler, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+//     }
+//     else{
+//       std::cout << "Bytes read: " << bytes_read << std::endl;
+//     }
+//   }
+//   else{
+//     std::cerr << e.message() << std::endl;
+//   }
+// }
 
 int main(){
     boost::asio::io_service io;
@@ -15,9 +28,7 @@ int main(){
     if(!serial.is_open()){
     serial.open(PORT);
     }
-    serial.write("255");
-    serial.async_read();
     io.run();
-    //serial.close();
+    serial.async_read();
     return 0;
 }
