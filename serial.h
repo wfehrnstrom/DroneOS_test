@@ -17,6 +17,9 @@ public:
   bool is_open();
   void async_read_until(std::string delim);
   void async_read_handler(const boost::system::error_code &e, std::size_t bytes_read);
+  void async_write_handler(const boost::system::error_code &e, std::size_t bytes_read);
+  void async_write(const char data[]);
+  void async_write(std::string string);
   void async_write();
 //boost::asio::serial_port &port, boost::asio::mutable_buffer &readBuffer, bool (Serial::*)(boost::system::error_code &e, std::size_t bytes_read)
 private:

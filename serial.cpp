@@ -64,6 +64,9 @@ Serial::Serial(std::string port_name, boost::asio::io_service* io, int baud_rate
   boost::asio::mutable_buffer* mutableWriteBuf = new boost::asio::mutable_buffer();
   readBuf_ = new boost::asio::mutable_buffers_1(*mutableReadBuf);
   writeBuf_ = new boost::asio::mutable_buffers_1(*mutableWriteBuf);
+  typedef std::allocator<char> Allocator;
+  Allocator* alloc = new Allocator();
+  b_ = new boost::asio::streambuf(1024, *alloc);
   port_->set_option(boost::asio::serial_port::baud_rate(baud_rate));
   //Configure parity and check for all cases
   //if parity == none
@@ -166,19 +169,32 @@ void Serial::openAndWaitOnPort(std::string port_name){
     }
 }
 
-void async_write_handler(const boost::system::error_code &e, std::size_t bytes_written){
+void Serial::async_write_handler(const boost::system::error_code &e, std::size_t bytes_written){
   std::cout << "Data written" << std::endl;
+  b_->consume(bytes_written);
 }
 
 void Serial::async_write(){
-  boost::asio::async_write(*port_, *b_, boost::bind(&async_write_handler, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+  boost::asio::async_write(*port_, *b_, boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+}
+
+void Serial::async_write(const char data[]){
+  std::ostream out(b_);
+  out.write(data, (sizeof(*data)/sizeof(data[0])));
+  boost::asio::async_write(*port_, *b_, boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+}
+
+void Serial::async_write(std::string string){
+  char stringToChar[string.size() + 1];
+  strcpy(stringToChar, string.c_str());
+  this->async_write(stringToChar);
 }
 
 void Serial::async_read_handler(const boost::system::error_code &e, std::size_t bytes_read){
-  std::cout << "Entered serial read handler" << std::endl;
   if(!(*e)){
     std::cout << bytes_read << std::endl;
     if(bytes_read > 0){
+      b_->commit(bytes_read);
       std::istream* instream = new std::istream(b_);
       std::string streamtostring;
       *instream >> streamtostring;
