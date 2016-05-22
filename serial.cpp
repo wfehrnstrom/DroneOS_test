@@ -174,17 +174,29 @@ void Serial::async_write_handler(const boost::system::error_code &e, std::size_t
   b_->consume(bytes_written);
 }
 
-void Serial::async_write(){
-  boost::asio::async_write(*port_, *b_, boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+void Serial::async_write(int n){
+  boost::asio::async_write(*port_, b_->prepare(n), boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
+// std::string printStream(std::ostream& os){
+//   std::ostringstream oss;
+//   oss << os;
+//   std::string dataInBuf = oss.str();
+//   return dataInBuf;
+// }
+
 void Serial::async_write(const char data[]){
+  std::string str(data);
   std::ostream out(b_);
-  out.write(data, (sizeof(*data)/sizeof(data[0])));
-  boost::asio::async_write(*port_, *b_, boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+  // std::cout << "PRINT STREAM1:" << printStream(out) << std::endl;
+  out << str;
+  std::cout << "data:" << str << std::endl;
+  // std::cout << "PRINT STREAM2:" << printStream(out) << std::endl;
+  boost::asio::async_write(*port_, b_->prepare(str.length()), boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
 void Serial::async_write(std::string string){
+  std::cout << "String size" << string.size() << std::endl;
   char stringToChar[string.size() + 1];
   strcpy(stringToChar, string.c_str());
   this->async_write(stringToChar);

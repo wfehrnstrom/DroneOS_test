@@ -20,7 +20,7 @@ public:
   void async_write_handler(const boost::system::error_code &e, std::size_t bytes_read);
   void async_write(const char data[]);
   void async_write(std::string string);
-  void async_write();
+  void async_write(int n);
 //boost::asio::serial_port &port, boost::asio::mutable_buffer &readBuffer, bool (Serial::*)(boost::system::error_code &e, std::size_t bytes_read)
 private:
   std::string port_name_;
