@@ -9,7 +9,8 @@
 #endif
 #include "serial.h"
 #include <boost/algorithm/string.hpp>
-
+#include <boost/thread.hpp>
+#include <fstream>
 // Serial::Serial(std::string port_name, boost::asio::io_service* io):port_name_(){
 //   //In default constructor, set baud rate to 9600
 //   port_ = new boost::asio::serial_port(*io, port_name);
@@ -178,20 +179,34 @@ void Serial::async_write(int n){
   boost::asio::async_write(*port_, b_->prepare(n), boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
-// std::string printStream(std::ostream& os){
-//   std::ostringstream oss;
-//   oss << os;
-//   std::string dataInBuf = oss.str();
-//   return dataInBuf;
-// }
+std::string printStream(std::ostream& os){
+  std::ostringstream oss;
+  oss << os;
+  std::string dataInBuf = oss.str();
+  return dataInBuf;
+}
 
 void Serial::async_write(const char data[]){
   std::string str(data);
+  std::ofstream outfile;
+  outfile.open("test.txt");
   std::ostream out(b_);
-  // std::cout << "PRINT STREAM1:" << printStream(out) << std::endl;
-  out << str;
+  std::cout << "PRINT STREAM1:" << printStream(out) << std::endl;
+  outfile << str;
+  outfile << str;
   std::cout << "data:" << str << std::endl;
-  // std::cout << "PRINT STREAM2:" << printStream(out) << std::endl;
+  // boost::this_thread::sleep(boost::posix_time::seconds(2));
+  out.put('a');
+  out.put('b');
+  out.put('c');
+  std::cout << "PS0:" << printStream(outfile) << std::endl;
+  out.flush();
+  out.seekp(0);
+  std::cout << "SEEK P 0:" << printStream(out) << std::endl;
+  out.seekp(1);
+  std::cout << "PS:" << printStream(out) << std::endl;
+  std::cout << "SEEK P 1:" << out.tellp() << std::endl;
+
   boost::asio::async_write(*port_, b_->prepare(str.length()), boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
