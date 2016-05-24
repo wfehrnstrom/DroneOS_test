@@ -213,9 +213,10 @@ void Serial::async_write(const char data[]){
 
 void Serial::async_write(std::string string){
   std::cout << "String size" << string.size() << std::endl;
-  char stringToChar[string.size() + 1];
-  strcpy(stringToChar, string.c_str());
-  this->async_write(stringToChar);
+  // char stringToChar[string.size() + 1];
+  // strcpy(stringToChar, string.c_str());
+  // this->async_write(stringToChar);
+  boost::asio::async_write(*port_, boost::asio::buffer(string, string.length()), boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
 void Serial::async_write_buffer(std::vector<char> data){
