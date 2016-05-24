@@ -173,6 +173,7 @@ void Serial::openAndWaitOnPort(std::string port_name){
 void Serial::async_write_handler(const boost::system::error_code &e, std::size_t bytes_written){
   std::cout << "Data written" << std::endl;
   b_->consume(bytes_written);
+  this->async_read_until("/n");
 }
 
 void Serial::async_write(int n){
@@ -215,6 +216,13 @@ void Serial::async_write(std::string string){
   char stringToChar[string.size() + 1];
   strcpy(stringToChar, string.c_str());
   this->async_write(stringToChar);
+}
+
+void Serial::async_write_buffer(std::vector<char> data){
+  int num = data.size();
+  std::cout << num << std::endl;
+  boost::asio::mutable_buffer buf(&data, data.size());
+  boost::asio::async_write(*port_, boost::asio::buffer(data, data.size()), boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
 void Serial::async_read_handler(const boost::system::error_code &e, std::size_t bytes_read){

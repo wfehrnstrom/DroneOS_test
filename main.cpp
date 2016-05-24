@@ -10,13 +10,14 @@ int main(){
     boost::asio::io_service io;
     Serial::Serial serial(PORT, &io, 9600);
     if(!serial.is_open()){
-    serial.open(PORT);
+      serial.open(PORT);
     }
     // serial.write("255");
-    // serial.async_read_until("\n");
+    //serial.async_read_until("\n");
     // const char arr[] = {'2', '5', '5'};
     // serial.async_write(arr);
-    std::string s = "50";
-    serial.async_write(s);
+    std::string s = "50089q503320232500202";
+    std::vector<char> data(s.begin(), s.end());
+    serial.async_write_buffer(data);
     io.run();
 }
