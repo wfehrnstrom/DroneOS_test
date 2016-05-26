@@ -173,7 +173,6 @@ void Serial::openAndWaitOnPort(std::string port_name){
 void Serial::async_write_handler(const boost::system::error_code &e, std::size_t bytes_written){
   std::cout << "Data written" << std::endl;
   b_->consume(bytes_written);
-  this->async_read_until("/n");
 }
 
 void Serial::async_write(int n){
@@ -212,7 +211,7 @@ void Serial::async_write(const char data[]){
 }
 
 void Serial::async_write(std::string string){
-  std::cout << "String size" << string.size() << std::endl;
+  std::cout << "String size:" << string.size() << std::endl;
   // char stringToChar[string.size() + 1];
   // strcpy(stringToChar, string.c_str());
   // this->async_write(stringToChar);
@@ -228,14 +227,17 @@ void Serial::async_write_buffer(std::vector<char> data){
 
 void Serial::async_read_handler(const boost::system::error_code &e, std::size_t bytes_read){
   if(!(*e)){
-    std::cout << bytes_read << std::endl;
+    std::cout << "bytes read in async read handler:" << bytes_read << std::endl;
     if(bytes_read > 0){
       b_->commit(bytes_read);
       std::istream* instream = new std::istream(b_);
+      std::ostream* outstream = new std::ostream(b_);
+      std::string outstreamtostring;
       std::string streamtostring;
+      *outstream << outstreamtostring;
       *instream >> streamtostring;
-      std::cout << "Read: " <<std::endl;
-      std::cout << streamtostring <<std::endl;
+      std::cout << "Read: " <<std::endl << streamtostring <<std::endl;
+      std::cout << "Read from outbuf:" << std::endl <<  outstreamtostring << std::endl;
     }
     else{
       std::cout << "No bytes read" << std::endl;

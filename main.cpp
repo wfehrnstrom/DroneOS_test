@@ -12,8 +12,10 @@ int main(){
     if(!serial.is_open()){
       serial.open(PORT);
     }
-    std::string s = "255";
+    std::string s = "15";
     serial.async_write(s);
+    std::string st = "Hi";
+    serial.async_write(st);
     serial.async_read_until("\n");
     // const char arr[] = {'2', '5', '5'};
     // serial.async_write(arr);
