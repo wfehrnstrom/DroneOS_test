@@ -68,6 +68,7 @@ Serial::Serial(std::string port_name, boost::asio::io_service* io, int baud_rate
   typedef std::allocator<char> Allocator;
   Allocator* alloc = new Allocator();
   b_ = new boost::asio::streambuf(1024, *alloc);
+
   port_->set_option(boost::asio::serial_port::baud_rate(baud_rate));
   //Configure parity and check for all cases
   //if parity == none
@@ -108,6 +109,7 @@ Serial::Serial(std::string port_name, boost::asio::io_service* io, int baud_rate
 }
 
 Serial::~Serial(){
+  this->close();
   std::cout << "Serial Port is being deleted" << std::endl;
 }
 
@@ -163,10 +165,12 @@ void Serial::wait(int time){
 
 void Serial::openAndWaitOnPort(std::string port_name){
     if(!this->is_open()){
+        std::cout << "opening" << std::endl;
         port_->open(port_name);
     }
     else{
         this->wait(2);
+        std::cout << "waiting" << std::endl;
     }
 }
 
@@ -226,10 +230,10 @@ void Serial::async_write_buffer(std::vector<char> data){
 }
 
 void Serial::async_read_handler(const boost::system::error_code &e, std::size_t bytes_read){
-  if(!(*e)){
+  if(!(e)){
     std::cout << "bytes read in async read handler:" << bytes_read << std::endl;
     if(bytes_read > 0){
-      b_->commit(bytes_read);
+      //b_->commit(bytes_read);
       std::istream* instream = new std::istream(b_);
       std::ostream* outstream = new std::ostream(b_);
       std::string outstreamtostring;
