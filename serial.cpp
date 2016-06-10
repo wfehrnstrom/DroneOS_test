@@ -1,9 +1,3 @@
-//NEED MAIN IN ORDER TO NOT THROW ERROR:Undefined symbols for architecture x86_64:
-//   "_main", referenced from:
-//      implicit entry/start for main executable
-// ld: symbol(s) not found for architecture x86_64
-// clang: error: linker command failed with exit code 1 (use -v to see invocation)
-// make: *** [all] Error 1
 #ifndef IOSTREAM_H
 #include <iostream>
 #endif
@@ -11,53 +5,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/thread.hpp>
 #include <fstream>
-// Serial::Serial(std::string port_name, boost::asio::io_service* io):port_name_(){
-//   //In default constructor, set baud rate to 9600
-//   port_ = new boost::asio::serial_port(*io, port_name);
-//   unsigned char data[] = {};
-//   boost::asio::mutable_buffer* mutableReadBuf = new boost::asio::mutable_buffer(data,2);
-//   boost::asio::mutable_buffer* mutableWriteBuf = new boost::asio::mutable_buffer();
-//   typedef std::allocator<char> Allocator;
-//   Allocator* alloc = new Allocator();
-//   b_ = new boost::asio::streambuf(1024, *alloc);
-//   readBuf_ = new boost::asio::mutable_buffers_1(*mutableReadBuf);
-//   writeBuf_ = new boost::asio::mutable_buffers_1(*mutableWriteBuf);
-//   port_->set_option(boost::asio::serial_port::baud_rate(9600));
-//   //Flow Control: allow the ability to slow down serial data in a wire and even stop it
-//   port_->set_option(boost::asio::serial_port::flow_control(boost::asio::serial_port::flow_control::none));
-//   //Specify whether to send a bit at the end of each binary transmission indicating whether the number of bits was odd
-//   //or even.
-//   port_->set_option(boost::asio::serial_port::parity(boost::asio::serial_port::parity::none));
-//   //Specify how many stop bits there are at the end of the serial transmission
-//   port_->set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::one));
-//   //open the serial port at the device name
-//   port_name_ = port_name;
-//   openAndWaitOnPort(port_name);
-// }
-//
-// Serial::Serial(std::string port_name, boost::asio::io_service* io, int baud_rate):port_name_(){
-//   //In default constructor, set baud rate to 9600
-//   port_ = new boost::asio::serial_port(*io, port_name);
-//   unsigned char data[] = {};
-//   boost::asio::mutable_buffer* mutableReadBuf = new boost::asio::mutable_buffer(data,2);
-//   boost::asio::mutable_buffer* mutableWriteBuf = new boost::asio::mutable_buffer();
-//   typedef std::allocator<char> Allocator;
-//   Allocator* alloc = new Allocator();
-//   b_ = new boost::asio::streambuf(1024, *alloc);
-//   readBuf_ = new boost::asio::mutable_buffers_1(*mutableReadBuf);
-//   writeBuf_ = new boost::asio::mutable_buffers_1(*mutableWriteBuf);
-//   port_->set_option(boost::asio::serial_port::baud_rate(baud_rate));
-//   //Flow Control: allow the ability to slow down serial data in a wire and even stop it
-//   port_->set_option(boost::asio::serial_port::flow_control(boost::asio::serial_port::flow_control::none));
-//   //Specify whether to send a bit at the end of each binary transmission indicating whether the number of bits was odd
-//   //or even.
-//   port_->set_option(boost::asio::serial_port::parity(boost::asio::serial_port::parity::none));
-//   //Specify how many stop bits there are at the end of the serial transmission
-//   port_->set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::one));
-//   //open the serial port at the device name
-//   port_name_ = port_name;
-//   openAndWaitOnPort(port_name);
-// }
 
 Serial::Serial(std::string port_name, boost::asio::io_service* io, int baud_rate, std::string flow_control, std::string parity, float stop_bits):port_name_(){
   port_ = new boost::asio::serial_port(*io, port_name);
@@ -68,7 +15,6 @@ Serial::Serial(std::string port_name, boost::asio::io_service* io, int baud_rate
   typedef std::allocator<char> Allocator;
   Allocator* alloc = new Allocator();
   b_ = new boost::asio::streambuf(1024, *alloc);
-
   port_->set_option(boost::asio::serial_port::baud_rate(baud_rate));
   //Configure parity and check for all cases
   //if parity == none
@@ -116,30 +62,56 @@ Serial::~Serial(){
 void Serial::write(std::string in){
   try{
     port_->write_some(boost::asio::buffer(in));
-      std::cout<< "Serial Data Written" <<std::endl;
   }
   catch(boost::system::system_error e){
-    std::cerr << "Serial Write Operation Failed" << std::endl;
+    std::cerr << "serial synchronous write operation failed" << std::endl;
   }
 }
 
-std::string Serial::read(std::string delimiter){
-  int bufSize = boost::asio::buffer_size(*readBuf_);
-  boost::asio::read(*port_, *readBuf_);
-  //char charBuf[bufSize];
-  //charBuf = boost::asio::buffer_cast<char[]>(readBuf_);
-  std::string read = *boost::asio::buffer_cast<std::string*>(*readBuf_);
-  //std::string read(charBuf, bufSize);
+std::string Serial::read_until(char delimiter){
+  std::string read;
+  try{
+    std::cout << "Beginning read." << std::endl;
+    b_->prepare(256);
+    int bufSize = boost::asio::buffer_size(b_->data());
+    std::size_t bytes_read = boost::asio::read_until(*port_, *b_, delimiter);
+    std::cout << "Finished read." << std::endl;
+    b_->commit(bytes_read);
+    std::cout << "Bytes Read: " << bytes_read << std::endl;
+    std::istream* instream = new std::istream(b_);
+    *instream >> read;
+    b_->consume(b_->size());
+    std::cout << "Read:" << read << std::endl;
+    boost::algorithm::trim(read);
+  }
+  catch(boost::system::system_error e){
+    std::cerr << "serial synchronous read operation failed" << std::endl;
+  }
+  return read;
+}
+
+std::string Serial::read_at_least(std::size_t num_bytes){
+  std::cout << "Beginning read." << std::endl;
+  b_->prepare(num_bytes);
+  std::size_t bytes_read = boost::asio::read(*port_, *b_, boost::asio::transfer_at_least(num_bytes));
+  std::cout << "Finished read." << std::endl;
+  b_->commit(bytes_read);
+  std::cout << "Bytes Read: " << bytes_read << std::endl;
+  std::istream* instream = new std::istream(b_);
+  std::string read;
+  *instream >> read;
+  b_->consume(b_->size());
+  std::cout << "Read:" << read << std::endl;
   boost::algorithm::trim(read);
   return read;
 }
 
 void Serial::open(std::string port_name){
   port_->open(port_name);
-    boost::asio::io_service io;
+  boost::asio::io_service io;
   boost::asio::deadline_timer t(io, boost::posix_time::seconds(2));
   t.wait();
-    std::cout << "Port opened!" << std::endl;
+  std::cout << "Port opened!" << std::endl;
 }
 
 void Serial::close(){
@@ -199,7 +171,6 @@ void Serial::async_write(const char data[]){
   outfile << str;
   outfile << str;
   std::cout << "data:" << str << std::endl;
-  // boost::this_thread::sleep(boost::posix_time::seconds(2));
   out.put('a');
   out.put('b');
   out.put('c');
@@ -210,7 +181,6 @@ void Serial::async_write(const char data[]){
   out.seekp(1);
   std::cout << "PS:" << printStream(out) << std::endl;
   std::cout << "SEEK P 1:" << out.tellp() << std::endl;
-
   boost::asio::async_write(*port_, b_->prepare(str.length()), boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
@@ -235,24 +205,24 @@ void Serial::async_read_handler(const boost::system::error_code &e, std::size_t 
     if(bytes_read > 0){
       //b_->commit(bytes_read);
       std::istream* instream = new std::istream(b_);
-      std::ostream* outstream = new std::ostream(b_);
-      std::string outstreamtostring;
       std::string streamtostring;
-      *outstream << outstreamtostring;
       *instream >> streamtostring;
+      char c = streamtostring.at(0);
+      int cVal = c;
+      std::cout << "Beginning character ASCII val: " << cVal << std::endl;
       std::cout << "Read: " <<std::endl << streamtostring <<std::endl;
-      std::cout << "Read from outbuf:" << std::endl <<  outstreamtostring << std::endl;
     }
     else{
       std::cout << "No bytes read" << std::endl;
     }
+    //std::cout << "After async_read:" << this->read_at_least(10) << std::endl;
   }
   else{
     std::cout << "Error occurred!" << std::endl;
     std::cerr << e.message() << std::endl;
   }
 }
-void Serial::async_read_until(std::string delim){
+void Serial::async_read_until(char delim){
   boost::system::error_code e;
   boost::asio::async_read_until(*port_, *b_, delim, boost::bind(&Serial::async_read_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }

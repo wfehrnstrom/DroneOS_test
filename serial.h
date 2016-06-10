@@ -9,16 +9,18 @@ class Serial{
 public:
   boost::asio::streambuf* b_;
   Serial(std::string port_name,boost::asio::io_service* io, int baud_rate = 9600, std::string flow_control = "none", std::string parity = "none", float stop_bits = 1.0);
+  //Serial(std::string port_name, boost::asio::io_service* io, int baud_rate);
   ~Serial();
   void write(std::string stringToBuffer);
-  std::string read(std::string delimiter);
+  std::string read_until(char delimiter);
+  std::string read_at_least(std::size_t numBytes);
   void cancel();
   void open(std::string port_name);
   void openAndWaitOnPort(std::string port_name);
   void close();
   void wait(int time);
   bool is_open();
-  void async_read_until(std::string delim);
+  void async_read_until(char delim);
   void async_read_handler(const boost::system::error_code &e, std::size_t bytes_read);
   void async_write_handler(const boost::system::error_code &e, std::size_t bytes_read);
   void async_write(const char data[]);

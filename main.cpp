@@ -4,23 +4,24 @@
 #ifndef SERIAL_H
 #include "serial.h"
 #endif
+#include <time.h>
+// #define PORT "/dev/tty.usbserial-DA01OTZ8"
 #define PORT "/dev/tty.usbmodem1411"
 
 int main(){
+    std::clock_t t;
+    t = std::clock();
     boost::asio::io_service io;
     Serial::Serial serial(PORT, &io, 9600);
     if(!serial.is_open()){
       serial.open(PORT);
     }
-    std::string s = "15";
-    serial.async_write(s);
-    std::string st = "Hi";
-    serial.async_write(st);
-    serial.async_read_until("\n");
-    // const char arr[] = {'2', '5', '5'};
-    // serial.async_write(arr);
-    // std::string s = "50089q503320232500202";
-    // std::vector<char> data(s.begin(), s.end());
-    // serial.async_write_buffer(data);
-    io.run();
+    // std::string s = "greetingsall!~";
+    // serial.write(s);
+    // serial.read_until('!');
+    // serial.write(s);
+    serial.read_until('!');
+    // io.run();
+    t = std::clock() - t;
+    std::cout << "Execution time:" << ((float)t)/CLOCKS_PER_SEC << std::endl;
 }
