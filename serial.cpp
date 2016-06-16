@@ -72,16 +72,14 @@ std::string Serial::read_until(char delimiter){
   std::string read;
   try{
     std::cout << "Beginning read." << std::endl;
-    b_->prepare(256);
-    int bufSize = boost::asio::buffer_size(b_->data());
     std::size_t bytes_read = boost::asio::read_until(*port_, *b_, delimiter);
     std::cout << "Finished read." << std::endl;
-    b_->commit(bytes_read);
+    //BYTES READ consists of a string, and then a carriage return ascii value with a newline ascii value
     std::cout << "Bytes Read: " << bytes_read << std::endl;
-    std::istream* instream = new std::istream(b_);
-    *instream >> read;
-    b_->consume(b_->size());
-    std::cout << "Read:" << read << std::endl;
+    std::istream instream(b_);
+    std::getline(instream, read, delimiter);
+    std::cout << "Read:" << std::endl;
+    std::cout << read << std::endl;
     boost::algorithm::trim(read);
   }
   catch(boost::system::system_error e){
@@ -99,7 +97,7 @@ std::string Serial::read_at_least(std::size_t num_bytes){
   std::cout << "Bytes Read: " << bytes_read << std::endl;
   std::istream* instream = new std::istream(b_);
   std::string read;
-  *instream >> read;
+  std::getline(*instream, read);
   b_->consume(b_->size());
   std::cout << "Read:" << read << std::endl;
   boost::algorithm::trim(read);
@@ -185,11 +183,9 @@ void Serial::async_write(const char data[]){
 }
 
 void Serial::async_write(std::string string){
-  std::cout << "String size:" << string.size() << std::endl;
-  // char stringToChar[string.size() + 1];
-  // strcpy(stringToChar, string.c_str());
-  // this->async_write(stringToChar);
-  boost::asio::async_write(*port_, boost::asio::buffer(string, string.length()), boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+  std::string data(string);
+  std::cout << "String size:" << data.size() << std::endl;
+  boost::asio::async_write(*port_, boost::asio::buffer(data), boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
 void Serial::async_write_buffer(std::vector<char> data){
@@ -204,9 +200,12 @@ void Serial::async_read_handler(const boost::system::error_code &e, std::size_t 
     std::cout << "bytes read in async read handler:" << bytes_read << std::endl;
     if(bytes_read > 0){
       //b_->commit(bytes_read);
-      std::istream* instream = new std::istream(b_);
+      //Dynamic allocation on the heap
+      //std::istream* instream = new std::istream(b_);
+      std::istream instream(b_);
       std::string streamtostring;
-      *instream >> streamtostring;
+      //std::getline(*instream, streamtostring);
+      std::getline(instream, streamtostring);
       char c = streamtostring.at(0);
       int cVal = c;
       std::cout << "Beginning character ASCII val: " << cVal << std::endl;
