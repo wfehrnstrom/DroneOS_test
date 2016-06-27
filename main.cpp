@@ -4,25 +4,25 @@
 #ifndef SERIAL_H
 #include "serial.h"
 #endif
-#include <time.h>
-#define PORT "/dev/tty.usbserial-DA01OTZ8"
-//#define PORT "/dev/tty.usbmodem1411"
+#ifndef TESTER_H
+#include "tester.h"
+#endif
+#ifndef PRINTER_H
+#include "printer.h"
+#endif
+#define SERIALPORT "/dev/tty.usbserial-DA01OTZ8"
+//#define SERIALPORT "/dev/tty.usbmodem1411"
 
 int main(){
-    std::clock_t t;
-    t = std::clock();
-    boost::asio::io_service io;
-    Serial::Serial serial(PORT, &io, 19200);
-    if(!serial.is_open()){
-      serial.open(PORT);
-    }
-    std::string s = "sup dawg\n";
-    serial.write(s);
-    // serial.read_until('!');
-    // serial.write(s);
-    serial.read_until('\n');
-    serial.write(s);
-    serial.read_until('\n');
-    t = std::clock() - t;
-    std::cout << "Execution time:" << ((float)t)/CLOCKS_PER_SEC << std::endl;
+  // boost::asio::io_service io;
+  // Serial serial(SERIALPORT, &io, 19200);
+  // std::string string = "sup dawg\n";
+  // serial.queue_in_streambuf(string);
+  // serial.write_all_data_in_streambuf();
+  // serial.async_read_all_incoming_data();
+  // io.run();
+  std::string path = "test.txt";
+  Tester tester(path);
+  tester.read_command_file();
+  tester.delete_all_dynamics();
 }

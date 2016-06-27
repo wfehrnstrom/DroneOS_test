@@ -5,111 +5,140 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/thread.hpp>
 #include <fstream>
+#define TOTAL_BYTES_IN_STREAMBUF 1024
+#define SECONDS_TO_WAIT_ON_OPEN 2
 
-Serial::Serial(std::string port_name, boost::asio::io_service* io, int baud_rate, std::string flow_control, std::string parity, float stop_bits):port_name_(){
-  port_ = new boost::asio::serial_port(*io, port_name);
-  boost::asio::mutable_buffer* mutableReadBuf = new boost::asio::mutable_buffer();
-  boost::asio::mutable_buffer* mutableWriteBuf = new boost::asio::mutable_buffer();
-  readBuf_ = new boost::asio::mutable_buffers_1(*mutableReadBuf);
-  writeBuf_ = new boost::asio::mutable_buffers_1(*mutableWriteBuf);
-  typedef std::allocator<char> Allocator;
-  Allocator* alloc = new Allocator();
-  b_ = new boost::asio::streambuf(1024, *alloc);
-  port_->set_option(boost::asio::serial_port::baud_rate(baud_rate));
-  //Configure parity and check for all cases
-  //if parity == none
-  if(parity == "none"){
-    port_->set_option(boost::asio::serial_port::parity(boost::asio::serial_port::parity::none));
-  }
-  //if parity is odd
-  else if(parity == "odd"){
-    port_->set_option(boost::asio::serial_port::parity(boost::asio::serial_port::parity::odd));
-  }
-  //if parity is even
-  else if(parity == "even"){
-    port_->set_option(boost::asio::serial_port::parity(boost::asio::serial_port::parity::even));
-  }
-
-  //Configure flow control
-  if(flow_control ==  "software"){
-    port_->set_option(boost::asio::serial_port::flow_control(boost::asio::serial_port::flow_control::software));
-  }
-  else if(flow_control=="hardware"){
-    port_->set_option(boost::asio::serial_port::flow_control(boost::asio::serial_port::flow_control::hardware));
-  }
-  else{
-    port_->set_option(boost::asio::serial_port::flow_control(boost::asio::serial_port::flow_control::none));
-  }
-
-  //Configure stop_bits
-  if(stop_bits == 1.0){
-    port_->set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::one));
-  }
-  else if(stop_bits == 1.5){
-    port_->set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::onepointfive));
-  }
-  else{
-    port_->set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::two));
-  }
-    openAndWaitOnPort(port_name);
+Serial::Serial(std::string port_name, boost::asio::io_service* io, std::size_t baud_rate, flow_control serial_flow_control, parity serial_parity, stop_bit stop_bits):port_name_(){
+  this->set_port(new boost::asio::serial_port(*io, port_name));
+  std::allocator<char>* alloc = new std::allocator<char>();
+  b_ = new boost::asio::streambuf(TOTAL_BYTES_IN_STREAMBUF, *alloc);
+  configure_baud_rate(baud_rate);
+  configure_parity(serial_parity);
+  configure_flow_control(serial_flow_control);
+  configure_stop_bits(stop_bits);
+  open(port_name);
 }
 
 Serial::~Serial(){
   this->close();
-  std::cout << "Serial Port is being deleted" << std::endl;
+  std::cout << "Serial Port deleted." << std::endl;
 }
 
-void Serial::write(std::string in){
-  try{
-    port_->write_some(boost::asio::buffer(in));
+bool Serial::diagnostics_enabled(){
+  return _diagnostics_enabled;
+}
+
+void Serial::set_diagnostics_enabled_to(bool state){
+  _diagnostics_enabled = state;
+}
+
+void Serial::log_error_and_log_message(const boost::system::error_code &e, std::string custom_error_message){
+  std::cerr << custom_error_message << std::endl;
+  std::cerr << e.message() << std::endl;
+}
+
+boost::asio::serial_port* Serial::get_port(){
+  return this->port_;
+}
+
+void Serial::set_port(boost::asio::serial_port* port){
+  this->port_ = port;
+}
+
+void Serial::configure_baud_rate(std::size_t baud_rate){
+  this->get_port()->set_option(boost::asio::serial_port::baud_rate(baud_rate));
+}
+
+void Serial::configure_parity(parity serial_parity){
+  //Configure parity and check for all cases
+  if(serial_parity == no_parity){
+    this->get_port()->set_option(boost::asio::serial_port::parity(boost::asio::serial_port::parity::none));
   }
-  catch(boost::system::system_error e){
-    std::cerr << "serial synchronous write operation failed" << std::endl;
+  else if(serial_parity == odd){
+    this->get_port()->set_option(boost::asio::serial_port::parity(boost::asio::serial_port::parity::odd));
+  }
+  else if(serial_parity == even){
+    this->get_port()->set_option(boost::asio::serial_port::parity(boost::asio::serial_port::parity::even));
   }
 }
 
-std::string Serial::read_until(char delimiter){
-  std::string read;
+void Serial::configure_flow_control(flow_control serial_flow_control){
+  if(serial_flow_control == software){
+    this->get_port()->set_option(boost::asio::serial_port::flow_control(boost::asio::serial_port::flow_control::software));
+  }
+  else if(serial_flow_control == hardware){
+    this->get_port()->set_option(boost::asio::serial_port::flow_control(boost::asio::serial_port::flow_control::hardware));
+  }
+  else if(serial_flow_control == no_flow_control){
+    this->get_port()->set_option(boost::asio::serial_port::flow_control(boost::asio::serial_port::flow_control::none));
+  }
+}
+
+void Serial::configure_stop_bits(stop_bit stop_bits){
+  if(stop_bits == one){
+    this->get_port()->set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::one));
+  }
+  else if(stop_bits == one_and_a_half){
+    this->get_port()->set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::onepointfive));
+  }
+  else if(stop_bits == two){
+    this->get_port()->set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::two));
+  }
+}
+
+std::size_t Serial::read_until(char delimiter){
+  std::size_t bytes_read;
   try{
-    std::cout << "Beginning read." << std::endl;
+    bytes_read = boost::asio::read_until(*port_, *b_, delimiter);
+  }catch(boost::system::error_code e){
+    log_error_and_log_message(e, "Synchronous read until failed.");
+  }
+  return bytes_read;
+}
+
+std::string Serial::read_until_and_retrieve(char delimiter){
+  std::string read = "";
+  try{
+    //bytes_read consists of a string, and then a carriage return ascii value with a newline ascii value
     std::size_t bytes_read = boost::asio::read_until(*port_, *b_, delimiter);
-    std::cout << "Finished read." << std::endl;
-    //BYTES READ consists of a string, and then a carriage return ascii value with a newline ascii value
-    std::cout << "Bytes Read: " << bytes_read << std::endl;
-    std::istream instream(b_);
-    std::getline(instream, read, delimiter);
-    std::cout << "Read:" << std::endl;
-    std::cout << read << std::endl;
-    boost::algorithm::trim(read);
+    read = retrieve_data_from_streambuf();
   }
-  catch(boost::system::system_error e){
-    std::cerr << "serial synchronous read operation failed" << std::endl;
+  catch(boost::system::error_code e){
+    log_error_and_log_message(e,  "Serial synchronous read_until_and_retrieve operation failed.");
   }
   return read;
 }
 
-std::string Serial::read_at_least(std::size_t num_bytes){
-  std::cout << "Beginning read." << std::endl;
-  b_->prepare(num_bytes);
+std::size_t Serial::read_at_least(std::size_t num_bytes){
   std::size_t bytes_read = boost::asio::read(*port_, *b_, boost::asio::transfer_at_least(num_bytes));
-  std::cout << "Finished read." << std::endl;
-  b_->commit(bytes_read);
-  std::cout << "Bytes Read: " << bytes_read << std::endl;
-  std::istream* instream = new std::istream(b_);
-  std::string read;
-  std::getline(*instream, read);
-  b_->consume(b_->size());
-  std::cout << "Read:" << read << std::endl;
-  boost::algorithm::trim(read);
+  return bytes_read;
+}
+
+std::string Serial::read_and_retrieve_at_least(std::size_t num_bytes){
+  std::size_t bytes_read = boost::asio::read(*port_, *b_, boost::asio::transfer_at_least(num_bytes));
+  std::string read = retrieve_data_from_streambuf();
+  return read;
+}
+
+std::string Serial::retrieve_data_from_streambuf(){
+  std::string read = "";
+  try{
+    std::istream* instream = new std::istream(b_);
+    std::getline(*instream, read);
+    boost::algorithm::trim(read);
+  }catch(boost::system::error_code e){
+    log_error_and_log_message(e, "data retrieval from streambuf was unsuccessful.");
+  }
   return read;
 }
 
 void Serial::open(std::string port_name){
-  port_->open(port_name);
-  boost::asio::io_service io;
-  boost::asio::deadline_timer t(io, boost::posix_time::seconds(2));
-  t.wait();
-  std::cout << "Port opened!" << std::endl;
+  if(!port_->is_open()){
+    port_->open(port_name);
+    boost::asio::io_service io;
+    boost::asio::deadline_timer t(io, boost::posix_time::seconds(SECONDS_TO_WAIT_ON_OPEN));
+    t.wait();
+  }
 }
 
 void Serial::close(){
@@ -133,95 +162,75 @@ void Serial::wait(int time){
     t.wait();
 }
 
-void Serial::openAndWaitOnPort(std::string port_name){
-    if(!this->is_open()){
-        std::cout << "opening" << std::endl;
-        port_->open(port_name);
-    }
-    else{
-        this->wait(2);
-        std::cout << "waiting" << std::endl;
-    }
+
+void Serial::write(std::string in){
+  try{
+    port_->write_some(boost::asio::buffer(in));
+  }
+  catch(boost::system::error_code e){
+    log_error_and_log_message(e,  "Serial synchronous write operation failed.");
+  }
+}
+
+void Serial::write_all_data_in_streambuf(){
+  try{port_->write_some(b_->data());}
+  catch(boost::system::error_code e){
+    log_error_and_log_message(e,  "Total write of everything in streambuf was unsuccessful.");
+  }
 }
 
 void Serial::async_write_handler(const boost::system::error_code &e, std::size_t bytes_written){
-  std::cout << "Data written" << std::endl;
-  b_->consume(bytes_written);
+  if(!e){
+    b_->consume(bytes_written);
+  }else{
+    log_error_and_log_message(e,  "Consuming of bytes in member streambuf failed.");
+  }
 }
 
-void Serial::async_write(int n){
-  boost::asio::async_write(*port_, b_->prepare(n), boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
-}
-
-std::string printStream(std::ostream& os){
-  std::ostringstream oss;
-  oss << os;
-  std::string dataInBuf = oss.str();
-  return dataInBuf;
-}
-
-void Serial::async_write(const char data[]){
-  std::string str(data);
-  std::ofstream outfile;
-  outfile.open("test.txt");
-  std::ostream out(b_);
-  std::cout << "PRINT STREAM1:" << printStream(out) << std::endl;
-  outfile << str;
-  outfile << str;
-  std::cout << "data:" << str << std::endl;
-  out.put('a');
-  out.put('b');
-  out.put('c');
-  std::cout << "PS0:" << printStream(outfile) << std::endl;
-  out.flush();
-  out.seekp(0);
-  std::cout << "SEEK P 0:" << printStream(out) << std::endl;
-  out.seekp(1);
-  std::cout << "PS:" << printStream(out) << std::endl;
-  std::cout << "SEEK P 1:" << out.tellp() << std::endl;
-  boost::asio::async_write(*port_, b_->prepare(str.length()), boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+void Serial::async_write_exactly(int num_bytes){
+  boost::asio::async_write(*port_, b_->prepare(num_bytes), boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
 void Serial::async_write(std::string string){
   std::string data(string);
-  std::cout << "String size:" << data.size() << std::endl;
   boost::asio::async_write(*port_, boost::asio::buffer(data), boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
-void Serial::async_write_buffer(std::vector<char> data){
-  int num = data.size();
-  std::cout << num << std::endl;
-  boost::asio::mutable_buffer buf(&data, data.size());
-  boost::asio::async_write(*port_, boost::asio::buffer(data, data.size()), boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+void Serial::async_write_all_data_in_streambuf(){
+  boost::asio::async_write(*port_, *b_, boost::bind(&Serial::async_write_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+}
+
+void Serial::queue_in_streambuf(std::string outgoing_string){
+  std::ostream* outstream = new std::ostream(b_);
+  (*outstream) << outgoing_string;
+}
+
+void Serial::print_write_diagnostics(){
+  
 }
 
 void Serial::async_read_handler(const boost::system::error_code &e, std::size_t bytes_read){
   if(!(e)){
-    std::cout << "bytes read in async read handler:" << bytes_read << std::endl;
-    if(bytes_read > 0){
-      //b_->commit(bytes_read);
-      //Dynamic allocation on the heap
-      //std::istream* instream = new std::istream(b_);
-      std::istream instream(b_);
-      std::string streamtostring;
-      //std::getline(*instream, streamtostring);
-      std::getline(instream, streamtostring);
-      char c = streamtostring.at(0);
-      int cVal = c;
-      std::cout << "Beginning character ASCII val: " << cVal << std::endl;
-      std::cout << "Read: " <<std::endl << streamtostring <<std::endl;
+    std::cout << "Bytes read in async read handler:" << bytes_read << std::endl;
+    if(diagnostics_enabled()){
+
     }
-    else{
-      std::cout << "No bytes read" << std::endl;
-    }
-    //std::cout << "After async_read:" << this->read_at_least(10) << std::endl;
   }
   else{
-    std::cout << "Error occurred!" << std::endl;
-    std::cerr << e.message() << std::endl;
+    log_error_and_log_message(e, "Generic asynchronous read error.");
   }
 }
+
 void Serial::async_read_until(char delim){
-  boost::system::error_code e;
   boost::asio::async_read_until(*port_, *b_, delim, boost::bind(&Serial::async_read_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+}
+
+void Serial::async_read_all_incoming_data(){
+  boost::asio::async_read(*port_, *b_, boost::bind(&Serial::async_read_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+}
+
+void print_read_diagnostics(){
+  std::cout << "DIAGNOSTICS BEGIN" << std::endl;
+  //TODO peek in buffer to get data in out buffer without removing it from that buffer
+  std::cout << "DIAGNOSTICS END" << std::endl;
 }

@@ -1,1 +1,43 @@
-hellomynameiswill~hellomynameiswill~
+Include existing directories, as well as ones specified under include.  Make padding for the main method.
+Find all methods located in header file included, and infer their arguments. Then, replace all instances of a method tag with
+specified method for that test.  create as many main files as needed in a special
+the same directory as the command file.  Ensure that no main.cpp's already exist in the same directory, and if any do exist,
+rename them to something non-interfering.  Then replace specified
+subcommands in define statements in each of the generated main files to their counterpart in the define statement.  Fork new
+main.cpps off of each of the old main.cpps that have different arguments that are being passed. Execute them one by one,
+sequentially renaming them from main1.cpp, main2.cpp, ..etc to main.cpp, and then rename them to something non-interfering.
+
+COMPUTING THE NUMBER OF CASES
+-----------------------------
+Number of different possible number placements: number of substitutions^(number of program lines waiting for substitution)
+Then, within each of those placements, there are (number of substitutions p1) * (number of substitutions p2)...etc possible
+programs.  And so the end number of mains will end up being the number of different possible order placements * the number of
+possible programs.
+
+number of substitutions^number of program lines + 
+
+
+START{
+INCLUDE:
+<fstream>
+"printer.h"
+
+DEFINE:
+stuff = string, string1
+stuff2 = string2
+print = std::cout
+endl = std::endl
+
+METHOD:
+print = [print, print_with_tabs, print_num_times, concat]
+
+PARAM:
+num_times = [5,7,9,100,-1]
+stuff = ["freed chikan", "mashed perdeders", "grope", "mork", "apple joose", "spegy an merbles"]
+stuff2 = [" tastes great", " is quite possibly the worst thing I've ever seen", " makes me nauseous"]
+
+DO:
+print;
+
+
+}END
